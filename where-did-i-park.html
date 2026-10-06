@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Where did I park</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f2ee;--surface:#fff;--ink:#1f2226;--muted:#6a6f76;--line:#d9d7cf;--blue:#1d5fd1;--onblue:#fff;--yellow:#f2c230;--danger:#b3261e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1d21;--surface:#262a30;--ink:#f1f0ec;--muted:#9aa0a8;--line:#3a3f47;--blue:#4b86ea;--danger:#ff8a80}}
+:root[data-theme="dark"]{--bg:#1b1d21;--surface:#262a30;--ink:#f1f0ec;--muted:#9aa0a8;--line:#3a3f47;--blue:#4b86ea;--danger:#ff8a80}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 Barlow,system-ui,sans-serif}
+main{max-width:480px;margin:0 auto;padding:20px 16px 40px}
+h1,h2,.big{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;margin:0}
+h1{font-size:28px}
+h2{font-size:20px;margin-bottom:8px}
+.sub{color:var(--muted);margin:2px 0 20px}
+button{font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+.park{width:100%;display:flex;align-items:center;gap:16px;padding:18px;border:0;border-radius:14px;background:var(--blue);color:var(--onblue);text-align:left}
+.park .p{flex:none;width:64px;height:64px;border:3px solid #fff;border-radius:10px;display:grid;place-items:center;font:700 44px "Barlow Condensed",sans-serif}
+.park b{display:block;font:700 26px "Barlow Condensed",sans-serif}
+.park span.s{opacity:.85;font-size:14px}
+.park:disabled{opacity:.6}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:16px}
+label{display:block;font-weight:600;margin:12px 0 4px}
+input[type=text],input[type=number]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btn{padding:10px 14px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);text-decoration:none;font-weight:600}
+.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.warn{color:var(--danger)}
+.compass{display:grid;place-items:center;margin:8px 0}
+.dial{width:170px;height:170px;border-radius:50%;border:4px solid var(--ink);display:grid;place-items:center;position:relative;background:var(--bg)}
+.dial svg{width:110px;height:110px;transition:transform .25s}
+.dial i{position:absolute;top:4px;font:700 14px "Barlow Condensed",sans-serif;font-style:normal;color:var(--muted)}
+.big{font-size:64px;line-height:1;text-align:center}
+.big small{font-size:24px}
+.center{text-align:center;color:var(--muted)}
+.thumb{width:100%;max-height:200px;object-fit:cover;border-radius:10px;margin-top:10px;border:1px solid var(--line)}
+.timer{font:700 40px "Barlow Condensed",sans-serif}
+.alert{background:var(--yellow);color:#1f2226;padding:12px;border-radius:10px;font-weight:600;margin-bottom:12px}
+.hist{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+.hist:first-of-type{border-top:0}
+.hist small{color:var(--muted);display:block}
+.msg{color:var(--danger);margin-top:10px;font-size:14px}
+.radar{display:block;width:100%;max-width:260px;margin:14px auto 0}
+.radar circle.ring{fill:none;stroke:var(--line);stroke-width:1}
+.radar text{fill:var(--muted);font:600 11px Barlow,sans-serif}
+.hist .btns{display:flex;gap:6px;flex:none}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <h1>Where did I park</h1>
+  <p class="sub">Save your spot in one tap. Find it when you're back.</p>
+
+  <div id="alert" class="alert" hidden></div>
+
+  <button class="park" id="parkBtn"><span class="p">P</span><span><b>I parked here</b><span class="s">Saves your location and the time</span></span></button>
+  <div class="msg" id="err" hidden></div>
+
+  <section class="card" id="saved" hidden>
+    <h2>Your car</h2>
+    <div class="center" id="when"></div>
+
+    <div class="compass">
+      <div class="dial"><i>N</i>
+        <svg id="arrow" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 L78 62 L50 50 L22 62 Z" fill="var(--blue)"/><circle cx="50" cy="50" r="5" fill="var(--ink)"/></svg>
+      </div>
+    </div>
+    <div class="big" id="dist">--</div>
+    <div class="center" id="dir">Waiting for your location…</div>
+    <div class="center" id="acc" style="font-size:14px"></div>
+    <div class="row" style="justify-content:center">
+      <button class="btn" id="compassBtn" hidden>Turn on compass</button>
+    </div>
+    <svg class="radar" id="radar" viewBox="0 0 200 200" role="img" aria-label="Mini map showing you and your car, north is up">
+      <circle class="ring" cx="100" cy="100" r="90"/><circle class="ring" cx="100" cy="100" r="45"/>
+      <text x="97" y="14">N</text>
+      <circle cx="100" cy="100" r="6" fill="var(--ink)"/>
+      <g id="carDot" hidden><circle r="9" fill="var(--blue)"/><text x="0" y="4" text-anchor="middle" style="fill:#fff;font:700 12px 'Barlow Condensed',sans-serif">P</text></g>
+      <text id="radarScale" x="100" y="196" text-anchor="middle"></text>
+    </svg>
+
+    <img id="photo" class="thumb" alt="Photo of where you parked" hidden>
+    <div id="noteShow" style="margin-top:10px;font-weight:600"></div>
+
+    <label for="note">Note (level, nearest exit…)</label>
+    <input type="text" id="note" placeholder="Level 3, near the elevator">
+    <div class="row">
+      <label class="btn" style="margin:0;cursor:pointer">Add photo
+        <input type="file" id="file" accept="image/*" capture="environment" hidden>
+      </label>
+      <button class="btn pri" id="saveNote">Save note</button>
+    </div>
+
+    <div class="row">
+      <a class="btn" id="mapLink" target="_blank" rel="noopener">Open in Maps</a>
+      <button class="btn" id="share">Share location</button>
+      <button class="btn warn" id="found">Found it</button>
+    </div>
+  </section>
+
+  <section class="card" id="timerCard" hidden>
+    <h2>Parking timer</h2>
+    <div id="timerSet">
+      <label for="mins">Remind me in (minutes)</label>
+      <input type="number" id="mins" min="1" max="1440" value="60" inputmode="numeric">
+      <div class="row"><button class="btn pri" id="startTimer">Start timer</button></div>
+    </div>
+    <div id="timerRun" hidden>
+      <div class="timer" id="left">00:00</div>
+      <div class="center" style="text-align:left;font-size:14px">Keep this page open to get the reminder.</div>
+      <div class="row"><button class="btn warn" id="stopTimer">Cancel timer</button></div>
+    </div>
+  </section>
+
+  <section class="card" id="histCard" hidden>
+    <h2>Recent spots</h2>
+    <div id="hist"></div>
+  </section>
+</main>
+
+<script>
+(function(){
+  var KEY="park-mvp-v1", state={current:null,history:[]}, here=null, heading=null, watchId=null, timerEnd=0, tick=null;
+  var $=function(id){return document.getElementById(id)};
+
+  function load(){try{var r=localStorage.getItem(KEY);if(r){var s=JSON.parse(r);if(s&&typeof s==="object")state={current:s.current||null,history:s.history||[]};if(state.current){var m=state.history.filter(function(h){return h.t===state.current.t})[0];if(m)state.current=m}}}catch(e){}}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){showErr("Couldn't save to this browser. Your spot is only kept until you close the page.")}}
+  function showErr(t){var e=$("err");e.textContent=t||"";e.hidden=!t}
+
+  function rad(d){return d*Math.PI/180}
+  function dist(a,b,c,d){var R=6371000,dl=rad(c-a),dn=rad(d-b),x=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(dn/2)*Math.sin(dn/2);return 2*R*Math.asin(Math.sqrt(x))}
+  function bearing(a,b,c,d){var y=Math.sin(rad(d-b))*Math.cos(rad(c)),x=Math.cos(rad(a))*Math.sin(rad(c))-Math.sin(rad(a))*Math.cos(rad(c))*Math.cos(rad(d-b));return (Math.atan2(y,x)*180/Math.PI+360)%360}
+  var names=["north","northeast","east","southeast","south","southwest","west","northwest"];
+  function compassName(b){return names[Math.round(b/45)%8]}
+  function fmtDist(m){return m<1000?'<span>'+Math.round(m)+'</span><small> m</small>':'<span>'+(m/1000).toFixed(m<10000?2:1)+'</span><small> km</small>'}
+  function fmtTime(t){var d=new Date(t);return d.toLocaleString([], {weekday:"short",hour:"numeric",minute:"2-digit"})}
+
+  function render(){
+    var c=state.current;
+    $("saved").hidden=!c; $("timerCard").hidden=!c;
+    if(c){
+      $("when").textContent="Parked "+fmtTime(c.t);
+      $("noteShow").textContent=c.note?"Note: "+c.note:"";
+      $("note").value=c.note||"";
+      $("photo").hidden=!c.photo; if(c.photo)$("photo").src=c.photo;
+      $("mapLink").href="https://www.google.com/maps/dir/?api=1&travelmode=walking&destination="+c.lat+","+c.lng;
+      $("share").hidden=!navigator.share;
+      updateNav();
+    }
+    var h=state.history.filter(function(x){return !state.current||x.t!==state.current.t});
+    $("histCard").hidden=!h.length;
+    $("hist").innerHTML="";
+    h.forEach(function(x){
+      var d=document.createElement("div");d.className="hist";
+      var l=document.createElement("div");l.innerHTML="<b></b><small></small>";
+      l.querySelector("b").textContent=x.note||"Saved spot";
+      l.querySelector("small").textContent=fmtTime(x.t);
+      if(here)l.querySelector("small").textContent+=" · "+(function(m){return m<1000?Math.round(m)+" m away":(m/1000).toFixed(1)+" km away"})(dist(here.lat,here.lng,x.lat,x.lng));
+      var w=document.createElement("div");w.className="btns";
+      var b=document.createElement("button");b.className="btn";b.textContent="Use this";
+      b.onclick=function(){state.current=x;save();render();startWatch()};
+      var r=document.createElement("button");r.className="btn warn";r.textContent="Delete";r.setAttribute("aria-label","Delete this saved spot");
+      r.onclick=function(){state.history=state.history.filter(function(y){return y!==x});save();render()};
+      w.appendChild(b);w.appendChild(r);d.appendChild(l);d.appendChild(w);$("hist").appendChild(d);
+    });
+  }
+
+  function updateNav(){
+    var c=state.current; if(!c)return;
+    if(!here){$("dist").textContent="--";return}
+    var m=dist(here.lat,here.lng,c.lat,c.lng), b=bearing(here.lat,here.lng,c.lat,c.lng);
+    $("dist").innerHTML=fmtDist(m);
+    $("dir").textContent=m<15?"You're right next to it":"Head "+compassName(b)+(heading==null?"":" · follow the arrow");
+    var rot=heading==null?b:b-heading;
+    $("arrow").style.transform="rotate("+rot+"deg)";
+    var a=Math.round(here.acc);
+    $("acc").textContent="GPS accuracy about "+a+" m"+(a>30?" (weak signal, use your note or photo)":"");
+    var range=Math.max(m*1.15,30), k=90/range, br=rad(b);
+    var x=100+Math.sin(br)*m*k, y=100-Math.cos(br)*m*k;
+    $("carDot").setAttribute("transform","translate("+x.toFixed(1)+","+y.toFixed(1)+")");
+    $("carDot").hidden=false;
+    $("radarScale").textContent="Outer ring: "+(range<1000?Math.round(range)+" m":(range/1000).toFixed(1)+" km");
+  }
+
+  function getPos(ok,fail){
+    if(!navigator.geolocation){fail({message:"This browser has no location support."});return}
+    navigator.geolocation.getCurrentPosition(ok,fail,{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+  }
+
+  $("parkBtn").onclick=function(){
+    showErr("");var b=$("parkBtn");b.disabled=true;
+    getPos(function(p){
+      b.disabled=false;
+      var s={t:Date.now(),lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,note:"",photo:null};
+      state.current=s;state.history.unshift(s);state.history=state.history.slice(0,6);
+      save();render();startWatch();
+      $("saved").scrollIntoView({behavior:"smooth",block:"start"});
+    },function(e){
+      b.disabled=false;
+      showErr(e.code===1?"Location is blocked. Allow location for this page in your browser settings, then try again.":"Couldn't get your location. Move to open sky if you can and try again.");
+    });
+  };
+
+  function startWatch(){
+    if(watchId!==null||!navigator.geolocation)return;
+    watchId=navigator.geolocation.watchPosition(function(p){
+      here={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy};updateNav();
+    },function(){},{enableHighAccuracy:true,maximumAge:2000});
+    if(window.DeviceOrientationEvent){
+      if(typeof DeviceOrientationEvent.requestPermission==="function"){$("compassBtn").hidden=false}
+      else listenCompass();
+    }
+  }
+  function onOrient(e){
+    var h=null;
+    if(typeof e.webkitCompassHeading==="number")h=e.webkitCompassHeading;
+    else if(e.absolute&&typeof e.alpha==="number")h=(360-e.alpha)%360;
+    if(h!==null){heading=h;updateNav()}
+  }
+  function listenCompass(){
+    window.addEventListener("deviceorientationabsolute",onOrient,true);
+    window.addEventListener("deviceorientation",onOrient,true);
+  }
+  $("compassBtn").onclick=function(){
+    DeviceOrientationEvent.requestPermission().then(function(r){if(r==="granted"){listenCompass();$("compassBtn").hidden=true}}).catch(function(){});
+  };
+
+  $("saveNote").onclick=function(){
+    if(!state.current)return;
+    state.current.note=$("note").value.trim();save();render();
+  };
+
+  $("file").onchange=function(){
+    var f=this.files&&this.files[0];if(!f||!state.current)return;
+    var img=new Image(),u=URL.createObjectURL(f);
+    img.onload=function(){
+      var s=Math.min(1,640/Math.max(img.width,img.height)),cv=document.createElement("canvas");
+      cv.width=Math.round(img.width*s);cv.height=Math.round(img.height*s);
+      cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
+      state.current.photo=cv.toDataURL("image/jpeg",0.7);URL.revokeObjectURL(u);save();render();
+    };
+    img.src=u;
+  };
+
+  $("share").onclick=function(){
+    var c=state.current;if(!c)return;
+    navigator.share({title:"My parked car",text:"My car is here:",url:"https://www.google.com/maps/search/?api=1&query="+c.lat+","+c.lng}).catch(function(){});
+  };
+
+  $("found").onclick=function(){
+    state.current=null;save();stopTimer();
+    if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}
+    here=null;render();
+  };
+
+  /* timer */
+  function fmtLeft(s){var h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60,p=function(n){return String(n).padStart(2,"0")};return (h?h+":":"")+p(m)+":"+p(x)}
+  $("startTimer").onclick=function(){
+    var m=parseInt($("mins").value,10);if(!(m>0))return;
+    timerEnd=Date.now()+m*60000;$("timerSet").hidden=true;$("timerRun").hidden=false;
+    $("alert").hidden=true;
+    try{if("Notification" in window&&Notification.permission==="default")Notification.requestPermission()}catch(e){}
+    clearInterval(tick);tick=setInterval(step,500);step();
+  };
+  function step(){
+    var s=Math.max(0,Math.round((timerEnd-Date.now())/1000));$("left").textContent=fmtLeft(s);
+    if(s===0){
+      stopTimer();var a=$("alert");a.textContent="Time's up. Move your car or add time at the meter.";a.hidden=false;
+      try{navigator.vibrate&&navigator.vibrate([300,150,300])}catch(e){}
+      try{if("Notification" in window&&Notification.permission==="granted")new Notification("Parking time is up")}catch(e){}
+      window.scrollTo({top:0,behavior:"smooth"});
+    }
+  }
+  function stopTimer(){clearInterval(tick);tick=null;$("timerSet").hidden=false;$("timerRun").hidden=true}
+  $("stopTimer").onclick=stopTimer;
+
+  load();render();if(state.current)startWatch();
+})();
+</script>
+</body>
+</html>
